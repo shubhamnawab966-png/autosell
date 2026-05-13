@@ -13,7 +13,7 @@ export function SignupPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:8000/register', {
+      const res = await fetch('https://autosell-production-b292.up.railway.app/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),

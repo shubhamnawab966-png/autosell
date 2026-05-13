@@ -13,7 +13,7 @@ export function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:8000/login', {
+      const res = await fetch('https://autosell-production-b292.up.railway.app/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
