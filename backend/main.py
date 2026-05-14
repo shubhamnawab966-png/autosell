@@ -53,3 +53,16 @@ def login(data: LoginData, db: Session = Depends(get_db)):
     if not user or not bcrypt.checkpw(data.password.encode(), user.password.encode()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return {"message": "Login successful!", "name": user.name}
+
+class ProductData(BaseModel):
+    name: str
+    price: float
+    supplier_url: str
+
+@app.post("/products")
+def add_product(data: ProductData):
+    return {"message": "Product added!", "product": data}
+
+@app.get("/products")
+def get_products():
+    return {"products": []}
