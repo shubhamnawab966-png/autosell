@@ -16,5 +16,10 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     password = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
-
+class Product(Base):
+    __tablename__ = "products"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+    price = Column(String)
+    supplier_url = Column(String)
 Base.metadata.create_all(bind=engine)
