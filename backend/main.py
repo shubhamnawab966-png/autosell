@@ -60,8 +60,19 @@ class ProductData(BaseModel):
     supplier_url: str
 
 @app.post("/products")
-def add_product(data: ProductData):
-    return {"message": "Product added!", "product": data}
+@app.post("/products")
+def add_product(data: ProductData, db: Session = Depends(get_db)):
+    from database import Product
+    product = Product(name=data.name, price=str(data.price), supplier_url=data.supplier_url)
+    db.add(product)
+    db.commit()
+    return {"message": "Product added!", "id": product.id}
+
+@app.get("/products")
+def get_products(db: Session = Depends(get_db)):
+    from database import Product
+    products = db.query(Product).all()
+    return {"products": [{"id": p.id, "name": p.name, "price": p.price, "supplier_url": p.supplier_url} for p in products]}
 
 @app.get("/products")
 def get_products():
