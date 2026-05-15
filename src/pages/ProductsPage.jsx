@@ -1,431 +1,163 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
-const sources = [
-  { id: "meesho", name: "Meesho", color: "from-pink-600/30 to-rose-600/20" },
-  { id: "glowroad", name: "Glowroad", color: "from-violet-600/30 to-purple-600/20" },
-  { id: "indiamart", name: "IndiaMart", color: "from-amber-600/30 to-orange-600/20" },
-  { id: "aliexpress", name: "AliExpress", color: "from-red-600/30 to-red-500/20" },
-];
+const API_BASE = "https://autosell-production-b292.up.railway.app";
+const getToken = () => localStorage.getItem("token");
 
-/** Public catalog: images (Unsplash) + videos (YouTube embeds & sample MP4s from the web). */
-const catalog = [
-  {
-    id: "cat-1",
-    name: "Handloom cotton saree — Indigo",
-    category: "Fashion",
-    price: "₹1,299",
-    source: "Meesho",
-    image:
-      "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&q=80&auto=format&fit=crop",
-    video: { kind: "youtube", id: "aqz-KE-bpKQ", caption: "Product reel (sample)" },
-  },
-  {
-    id: "cat-2",
-    name: "Stainless steel cookware set",
-    category: "Kitchen",
-    price: "₹2,450",
-    source: "Glowroad",
-    image:
-      "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=600&q=80&auto=format&fit=crop",
-    video: {
-      kind: "mp4",
-      src: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-      caption: "Promo clip (Google sample CDN)",
-    },
-  },
-  {
-    id: "cat-3",
-    name: "Wireless neckband earphones",
-    category: "Electronics",
-    price: "₹899",
-    source: "IndiaMart",
-    image:
-      "https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?w=600&q=80&auto=format&fit=crop",
-    video: { kind: "youtube", id: "M7lc1UVf-VE", caption: "YouTube embed test (Google)" },
-  },
-  {
-    id: "cat-4",
-    name: "Ayurvedic hair oil combo",
-    category: "Beauty",
-    price: "₹549",
-    source: "Meesho",
-    image:
-      "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=600&q=80&auto=format&fit=crop",
-    video: {
-      kind: "mp4",
-      src: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-      caption: "Lifestyle b-roll (sample)",
-    },
-  },
-  {
-    id: "cat-5",
-    name: "Kids school backpack",
-    category: "Kids",
-    price: "₹699",
-    source: "AliExpress",
-    image:
-      "https://images.unsplash.com/photo-1622560480605-d83c853bc5c3?w=600&q=80&auto=format&fit=crop",
-    video: { kind: "youtube", id: "ScMzIvxBSi4", caption: "Unboxing style (sample)" },
-  },
-  {
-    id: "cat-6",
-    name: "Decorative wall plates (set of 3)",
-    category: "Home",
-    price: "₹1,050",
-    source: "Glowroad",
-    image:
-      "https://images.unsplash.com/photo-1615876234889-fd8a39a275d9?w=600&q=80&auto=format&fit=crop",
-    video: {
-      kind: "mp4",
-      src: "https://www.w3schools.com/html/mov_bbb.mp4",
-      caption: "Short loop (W3Schools sample)",
-    },
-  },
-];
-
-const spotlightVideos = [
-  {
-    title: "Filming products on a budget",
-    subtitle: "YouTube — Creative Commons / Big Buck Bunny channel",
-    youtubeId: "aqz-KE-bpKQ",
-  },
-  {
-    title: "YouTube player API sample",
-    subtitle: "Google official embed test",
-    youtubeId: "M7lc1UVf-VE",
-  },
-];
-
-const products = [
-  {
-    sku: "ME-20491",
-    name: "Cotton kurti set — Navy",
-    source: "Meesho",
-    price: "₹899",
-    margin: "22%",
-    status: "Live",
-    thumb:
-      "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=120&q=80&auto=format&fit=crop",
-  },
-  {
-    sku: "GR-8832",
-    name: "Kitchen storage jars (6 pc)",
-    source: "Glowroad",
-    price: "₹449",
-    margin: "18%",
-    status: "Live",
-    thumb:
-      "https://images.unsplash.com/photo-1584990340481-57909576354e?w=120&q=80&auto=format&fit=crop",
-  },
-  {
-    sku: "IM-7721",
-    name: "LED emergency bulb 12W",
-    source: "IndiaMart",
-    price: "₹312",
-    margin: "14%",
-    status: "Draft",
-    thumb:
-      "https://images.unsplash.com/photo-1565814329452-e1efa1c3a89f?w=120&q=80&auto=format&fit=crop",
-  },
-  {
-    sku: "AE-11902",
-    name: "USB-C hub 7-in-1",
-    source: "AliExpress",
-    price: "₹1,290",
-    margin: "31%",
-    status: "Live",
-    thumb:
-      "https://images.unsplash.com/photo-1625948515291-69613efd103f?w=120&q=80&auto=format&fit=crop",
-  },
-  {
-    sku: "ME-441",
-    name: "Men's sneakers — White",
-    source: "Meesho",
-    price: "₹1,099",
-    margin: "6%",
-    status: "Paused",
-    thumb:
-      "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=120&q=80&auto=format&fit=crop",
-  },
-];
+const PLATFORMS = ["Meesho", "Flipkart", "Amazon", "Other"];
+const CATEGORIES = ["Fashion", "Electronics", "Home & Kitchen", "Beauty", "Sports", "Toys", "Books", "Other"];
+const emptyForm = { name: "", sku: "", cost_price: "", sell_price: "", platform: "Meesho", category: "Fashion", stock: "", image_url: "", description: "" };
 
 export function ProductsPage() {
-  const [toast, setToast] = useState(null);
-  const [videoModal, setVideoModal] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [search, setSearch] = useState("");
+  const [filterPlatform, setFilterPlatform] = useState("All");
+  const [editId, setEditId] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
 
-  const importFrom = (name) => {
-    setToast(`Import started from ${name}…`);
-    setTimeout(() => setToast(null), 2800);
+  useEffect(() => { fetchProducts(); }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/products`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      setProducts(data.products || []);
+    } catch (err) {
+      setError("Products load nahi hue");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const closeModal = useCallback(() => setVideoModal(null), []);
+  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  useEffect(() => {
-    if (!videoModal) return;
-    const onKey = (e) => {
-      if (e.key === "Escape") closeModal();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [videoModal, closeModal]);
+  const handleSubmit = async () => {
+    setError(""); setSuccess("");
+    if (!form.name || !form.cost_price || !form.sell_price) { setError("Name, Cost Price aur Sell Price required hain."); return; }
+    setSubmitting(true);
+    try {
+      const url = editId ? `${API_BASE}/api/products/${editId}` : `${API_BASE}/api/products`;
+      const method = editId ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ ...form, cost_price: parseFloat(form.cost_price), sell_price: parseFloat(form.sell_price), stock: parseInt(form.stock) || 0 }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.message || d.detail || "Error"); }
+      setSuccess(editId ? "Product update ho gaya! ✅" : "Product add ho gaya! ✅");
+      setForm(emptyForm); setShowForm(false); setEditId(null);
+      fetchProducts();
+    } catch (err) { setError(err.message); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleDelete = async (id) => {
+    setDeleteId(id);
+    try {
+      await fetch(`${API_BASE}/api/products/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` } });
+      setSuccess("Deleted ✅"); fetchProducts();
+    } catch { setError("Delete error"); }
+    finally { setDeleteId(null); }
+  };
+
+  const handleEdit = (p) => { setForm({ name: p.name||"", sku: p.sku||"", cost_price: p.cost_price||"", sell_price: p.sell_price||"", platform: p.platform||"Meesho", category: p.category||"Fashion", stock: p.stock||"", image_url: p.image_url||"", description: p.description||"" }); setEditId(p.id); setShowForm(true); };
+
+  const filtered = products.filter(p => (p.name?.toLowerCase().includes(search.toLowerCase()) || p.sku?.toLowerCase().includes(search.toLowerCase())) && (filterPlatform === "All" || p.platform === filterPlatform));
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Products</h1>
-          <p className="mt-1 text-slate-400">
-            Browse the live-style catalog (internet media), then sync rows to your stores.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:bg-blue-500"
-        >
-          Add product manually
+    <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto", fontFamily: "sans-serif", background: "#f3f4f6", minHeight: "100vh" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>📦 Products</h1>
+        <button onClick={() => { setShowForm(!showForm); setForm(emptyForm); setEditId(null); }} style={{ background: "#4f46e5", color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>
+          {showForm ? "✕ Cancel" : "+ Product Add Karo"}
         </button>
       </div>
 
-      {/* Product catalog — images + video */}
-      <section className="rounded-xl border border-slate-800/80 bg-surface-900/60 p-5 shadow-panel sm:p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-white">Product catalog</h2>
-            <p className="text-sm text-slate-400">
-              Photos from Unsplash; videos open YouTube embeds or MP4 streams from public CDNs.
-            </p>
-          </div>
-          <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-medium text-blue-300">
-            {catalog.length} trending SKUs
-          </span>
-        </div>
+      {error && <div style={{ background: "#fee2e2", color: "#b91c1c", padding: "10px 16px", borderRadius: 8, marginBottom: 16 }}>{error}</div>}
+      {success && <div style={{ background: "#dcfce7", color: "#15803d", padding: "10px 16px", borderRadius: 8, marginBottom: 16 }}>{success}</div>}
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {catalog.map((item) => (
-            <article
-              key={item.id}
-              className="group overflow-hidden rounded-xl border border-slate-800/80 bg-surface-950/50 transition hover:border-blue-500/35"
-            >
-              <div className="relative aspect-[4/3] overflow-hidden bg-slate-900">
-                <img
-                  src={item.image}
-                  alt=""
-                  className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                <button
-                  type="button"
-                  onClick={() => setVideoModal({ title: item.name, video: item.video })}
-                  className="absolute bottom-3 left-3 right-3 flex items-center justify-center gap-2 rounded-lg bg-blue-600/90 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur transition hover:bg-blue-500"
-                >
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                      <path d="M8 5v14l11-7L8 5z" />
-                    </svg>
-                  </span>
-                  Play video
-                </button>
-                <span className="absolute left-3 top-3 rounded-md bg-black/50 px-2 py-1 text-xs font-medium text-white backdrop-blur">
-                  {item.category}
-                </span>
+      {showForm && (
+        <div style={{ background: "#fff", borderRadius: 12, padding: 20, marginBottom: 20, border: "1px solid #e5e7eb" }}>
+          <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 16 }}>{editId ? "✏️ Edit Product" : "➕ Naya Product"}</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {[["name","Product Name *"],["sku","SKU"],["cost_price","Cost Price (₹) *"],["sell_price","Sell Price (₹) *"]].map(([key, label]) => (
+              <div key={key}>
+                <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>{label}</label>
+                <input name={key} value={form[key]} onChange={handleChange} style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #d1d5db", borderRadius: 8, fontSize: 14, boxSizing: "border-box" }} />
               </div>
-              <div className="space-y-1 p-4">
-                <h3 className="font-medium leading-snug text-slate-100">{item.name}</h3>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
-                  <span>{item.source}</span>
-                  <span className="text-slate-600">·</span>
-                  <span className="font-semibold text-white">{item.price}</span>
-                </div>
-                <p className="text-xs text-slate-500">{item.video.caption}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* Inline internet videos */}
-      <section className="rounded-xl border border-slate-800/80 bg-surface-900/60 p-5 shadow-panel sm:p-6">
-        <h2 className="text-lg font-semibold text-white">Catalog video wall</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Curated embeds from YouTube — useful for training staff or supplier research.
-        </p>
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          {spotlightVideos.map((v) => (
-            <div key={v.youtubeId} className="overflow-hidden rounded-xl border border-slate-800 bg-black/40">
-              <div className="aspect-video w-full">
-                <iframe
-                  title={v.title}
-                  className="h-full w-full"
-                  src={`https://www.youtube.com/embed/${v.youtubeId}?rel=0`}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  loading="lazy"
-                />
-              </div>
-              <div className="border-t border-slate-800/80 px-4 py-3">
-                <p className="font-medium text-slate-200">{v.title}</p>
-                <p className="text-xs text-slate-500">{v.subtitle}</p>
-              </div>
+            ))}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Platform</label>
+              <select name="platform" value={form.platform} onChange={handleChange} style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #d1d5db", borderRadius: 8, fontSize: 14 }}>
+                {PLATFORMS.map(p => <option key={p}>{p}</option>)}
+              </select>
             </div>
-          ))}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Category</label>
+              <select name="category" value={form.category} onChange={handleChange} style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #d1d5db", borderRadius: 8, fontSize: 14 }}>
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Stock</label>
+              <input name="stock" type="number" value={form.stock} onChange={handleChange} style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #d1d5db", borderRadius: 8, fontSize: 14 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Image URL</label>
+              <input name="image_url" value={form.image_url} onChange={handleChange} style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #d1d5db", borderRadius: 8, fontSize: 14 }} />
+            </div>
+          </div>
+          <button onClick={handleSubmit} disabled={submitting} style={{ marginTop: 16, background: "#4f46e5", color: "#fff", border: "none", padding: "10px 24px", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>
+            {submitting ? "Saving..." : editId ? "✅ Update" : "✅ Add Karo"}
+          </button>
         </div>
-      </section>
+      )}
 
-      <div>
-        <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Import from</h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {sources.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => importFrom(s.name)}
-              className={`group relative overflow-hidden rounded-xl border border-slate-800/80 bg-gradient-to-br ${s.color} p-5 text-left transition hover:border-blue-500/40`}
-            >
-              <span className="relative z-10 text-lg font-semibold text-white">{s.name}</span>
-              <p className="relative z-10 mt-1 text-sm text-slate-300/90">Connect & sync catalog</p>
-              <span className="relative z-10 mt-4 inline-flex items-center text-sm font-medium text-blue-300 group-hover:text-blue-200">
-                Start import →
-              </span>
-            </button>
-          ))}
-        </div>
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Search..." style={{ padding: "8px 12px", border: "1.5px solid #d1d5db", borderRadius: 8, fontSize: 14, flex: 1, maxWidth: 300 }} />
+        {["All", ...PLATFORMS].map(p => (
+          <button key={p} onClick={() => setFilterPlatform(p)} style={{ padding: "7px 14px", borderRadius: 20, border: filterPlatform === p ? "none" : "1.5px solid #d1d5db", background: filterPlatform === p ? "#4f46e5" : "#fff", color: filterPlatform === p ? "#fff" : "#374151", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>{p}</button>
+        ))}
       </div>
 
-      {toast ? (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-blue-500/40 bg-surface-900 px-4 py-2 text-sm text-blue-200 shadow-glow">
-          {toast}
-        </div>
-      ) : null}
-
-      {videoModal ? (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-          role="presentation"
-          onClick={closeModal}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="video-modal-title"
-            className="relative w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-700 bg-surface-900 shadow-panel"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3 border-b border-slate-800 px-4 py-3 sm:px-5">
-              <div>
-                <h3 id="video-modal-title" className="pr-8 font-semibold text-white">
-                  {videoModal.title}
-                </h3>
-                <p className="text-xs text-slate-500">{videoModal.video.caption}</p>
-              </div>
-              <button
-                type="button"
-                onClick={closeModal}
-                className="rounded-lg p-2 text-slate-400 hover:bg-surface-800 hover:text-white"
-                aria-label="Close video"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="bg-black">
-              {videoModal.video.kind === "youtube" ? (
-                <div className="aspect-video w-full">
-                  <iframe
-                    title={videoModal.title}
-                    className="h-full w-full"
-                    src={`https://www.youtube.com/embed/${videoModal.video.id}?autoplay=1&rel=0`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  />
-                </div>
-              ) : (
-                <video
-                  className="max-h-[70vh] w-full"
-                  controls
-                  playsInline
-                  autoPlay
-                  src={videoModal.video.src}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="rounded-xl border border-slate-800/80 bg-surface-900/60 shadow-panel">
-        <div className="flex flex-col gap-4 border-b border-slate-800/80 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <input
-            type="search"
-            placeholder="Search SKU or title…"
-            className="w-full max-w-md rounded-lg border border-slate-700 bg-surface-800 px-3 py-2 text-sm text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 sm:w-auto"
-          />
-          <div className="flex flex-wrap gap-2">
-            <select className="rounded-lg border border-slate-700 bg-surface-800 px-3 py-2 text-sm text-slate-200 outline-none focus:border-blue-500">
-              <option>All sources</option>
-              <option>Meesho</option>
-              <option>Glowroad</option>
-              <option>IndiaMart</option>
-              <option>AliExpress</option>
-            </select>
-            <select className="rounded-lg border border-slate-700 bg-surface-800 px-3 py-2 text-sm text-slate-200 outline-none focus:border-blue-500">
-              <option>All status</option>
-              <option>Live</option>
-              <option>Draft</option>
-              <option>Paused</option>
-            </select>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="border-b border-slate-800/80 bg-surface-950/50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-6 py-3 font-medium">Product</th>
-                <th className="px-6 py-3 font-medium">SKU</th>
-                <th className="px-6 py-3 font-medium">Source</th>
-                <th className="px-6 py-3 font-medium">Selling price</th>
-                <th className="px-6 py-3 font-medium">Margin</th>
-                <th className="px-6 py-3 font-medium">Status</th>
+      {loading ? <div style={{ textAlign: "center", padding: 60, background: "#fff", borderRadius: 12 }}>Loading...</div>
+      : filtered.length === 0 ? <div style={{ textAlign: "center", padding: 60, background: "#fff", borderRadius: 12, border: "2px dashed #e5e7eb" }}><div style={{ fontSize: 48 }}>📦</div><h3>Koi product nahi hai</h3><p style={{ color: "#9ca3af" }}>Upar "+ Product Add Karo" button dabaao!</p></div>
+      : (
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <thead>
+              <tr style={{ background: "#f9fafb" }}>
+                {["Product","SKU","Platform","Cost","Sell","Profit","Stock","Actions"].map(h => <th key={h} style={{ textAlign: "left", padding: "10px 14px", color: "#6b7280", fontSize: 12, fontWeight: 600, textTransform: "uppercase" }}>{h}</th>)}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {products.map((p) => (
-                <tr key={p.sku} className="hover:bg-surface-800/30">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={p.thumb}
-                        alt=""
-                        className="h-10 w-10 shrink-0 rounded-lg object-cover ring-1 ring-slate-700/80"
-                        loading="lazy"
-                      />
-                      <span className="font-medium text-slate-200">{p.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-mono text-xs text-slate-400">{p.sku}</td>
-                  <td className="px-6 py-4 text-slate-300">{p.source}</td>
-                  <td className="px-6 py-4 font-medium text-white">{p.price}</td>
-                  <td className="px-6 py-4 text-slate-300">{p.margin}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        p.status === "Live"
-                          ? "bg-emerald-500/15 text-emerald-400"
-                          : p.status === "Draft"
-                            ? "bg-slate-600/40 text-slate-300"
-                            : "bg-amber-500/15 text-amber-400"
-                      }`}
-                    >
-                      {p.status}
-                    </span>
+            <tbody>
+              {filtered.map((p, i) => (
+                <tr key={p.id} style={{ background: i % 2 === 0 ? "#fff" : "#f9fafb", borderTop: "1px solid #f3f4f6" }}>
+                  <td style={{ padding: "12px 14px", fontWeight: 600 }}>{p.name}</td>
+                  <td style={{ padding: "12px 14px", color: "#6b7280", fontFamily: "monospace", fontSize: 12 }}>{p.sku || "—"}</td>
+                  <td style={{ padding: "12px 14px" }}><span style={{ background: "#ede9fe", color: "#7c3aed", padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{p.platform}</span></td>
+                  <td style={{ padding: "12px 14px" }}>₹{parseFloat(p.cost_price||0).toFixed(0)}</td>
+                  <td style={{ padding: "12px 14px", fontWeight: 600 }}>₹{parseFloat(p.sell_price||0).toFixed(0)}</td>
+                  <td style={{ padding: "12px 14px" }}><span style={{ background: "#dcfce7", color: "#16a34a", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>₹{(parseFloat(p.sell_price||0)-parseFloat(p.cost_price||0)).toFixed(0)}</span></td>
+                  <td style={{ padding: "12px 14px" }}>{p.stock ?? "—"}</td>
+                  <td style={{ padding: "12px 14px" }}>
+                    <button onClick={() => handleEdit(p)} style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 6, padding: "4px 8px", cursor: "pointer", marginRight: 6 }}>✏️</button>
+                    <button onClick={() => handleDelete(p.id)} disabled={deleteId === p.id} style={{ background: "#fff1f2", border: "1px solid #fecaca", borderRadius: 6, padding: "4px 8px", cursor: "pointer" }}>🗑️</button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
+      )}
     </div>
   );
 }
