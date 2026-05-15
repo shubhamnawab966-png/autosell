@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime
+from sqlalchemy import create_engine, Column, Integer, String,Float,DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -19,7 +19,14 @@ class User(Base):
 class Product(Base):
     __tablename__ = "products"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
-    price = Column(String)
-    supplier_url = Column(String)
+    name = Column(String, nullable=False)
+    sku = Column(String)
+    cost_price = Column(Float)
+    sell_price = Column(Float)
+    platform = Column(String)
+    category = Column(String)
+    stock = Column(Integer, default=0)
+    image_url = Column(String)
+    description = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
 Base.metadata.create_all(bind=engine)
