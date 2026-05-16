@@ -140,7 +140,7 @@ export function ProductsPage() {
             </thead>
             <tbody>
               {filtered.map((p, i) => (
-                <tr key={p.id} style={{ background: i % 2 === 0 ? "#fff" : "#f9fafb", borderTop: "1px solid #f3f4f6" }}>
+              style={{ background: i % 2 === 0 ? "#fff" : "#f9fafb", borderTop: "1px solid #f3f4f6", color: "#111827" }} 
                   <td style={{ padding: "12px 14px", fontWeight: 600 }}>{p.name}</td>
                   <td style={{ padding: "12px 14px", color: "#6b7280", fontFamily: "monospace", fontSize: 12 }}>{p.sku || "—"}</td>
                   <td style={{ padding: "12px 14px" }}><span style={{ background: "#ede9fe", color: "#7c3aed", padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{p.platform}</span></td>
