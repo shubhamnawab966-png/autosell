@@ -74,7 +74,7 @@ export function ProductsPage() {
   );
 
   const D = {
-    page: { padding: 24, maxWidth: 1100, margin: "0 auto", fontFamily: "sans-serif", background: "#0f172a", minHeight: "100vh", color: "#f1f5f9" },
+    page: { padding: 24, maxWidth: 1100, margin: "0 auto", fontFamily: "sans-serif", background: "#0f172a", minHeight: "100vh", background: "#0f172a", background: "#0f172a", color: "#f1f5f9" },
     header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
     title: { fontSize: 26, fontWeight: 700, margin: 0, color: "#f1f5f9" },
     btnPrimary: { background: "#6366f1", color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 14 },
