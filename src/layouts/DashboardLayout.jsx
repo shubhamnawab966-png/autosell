@@ -143,7 +143,7 @@ export function DashboardLayout() {
           </button>
           <Logo className="scale-95" />
         </header>
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8 bg-gray-950 min-h-screen">
           <Outlet />
         </main>
       </div>
