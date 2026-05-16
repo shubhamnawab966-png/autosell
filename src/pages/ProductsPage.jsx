@@ -144,8 +144,8 @@ export function ProductsPage() {
                   <td style={{ padding: "12px 14px", fontWeight: 600 }}>{p.name}</td>
                   <td style={{ padding: "12px 14px", color: "#6b7280", fontFamily: "monospace", fontSize: 12 }}>{p.sku || "—"}</td>
                   <td style={{ padding: "12px 14px" }}><span style={{ background: "#ede9fe", color: "#7c3aed", padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{p.platform}</span></td>
-                  <td style={{ padding: "12px 14px" }}>₹{parseFloat(p.cost_price||0).toFixed(0)}</td>
-                  <td style={{ padding: "12px 14px", fontWeight: 600 }}>₹{parseFloat(p.sell_price||0).toFixed(0)}</td>
+        <td style={{ padding: "12px 14px", color: "#111827", fontWeight: 600 }}>₹{parseFloat(p.cost_price||0).toFixed(0)}</td>    
+                 <td style={{ padding: "12px 14px", fontWeight: 600, color: "#111827" }}>₹{parseFloat(p.sell_price||0).toFixed(0)}</td>
                   <td style={{ padding: "12px 14px" }}><span style={{ background: "#dcfce7", color: "#16a34a", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>₹{(parseFloat(p.sell_price||0)-parseFloat(p.cost_price||0)).toFixed(0)}</span></td>
                   <td style={{ padding: "12px 14px" }}>{p.stock ?? "—"}</td>
                   <td style={{ padding: "12px 14px" }}>
