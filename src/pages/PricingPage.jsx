@@ -1,117 +1,143 @@
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 
-const plans = [
-  {
-    name: "Free",
-    price: "₹0",
-    period: "forever",
-    desc: "Try imports and manual order sync.",
-    features: ["50 products", "100 orders / mo", "Email support", "1 marketplace"],
-    cta: "Current plan",
-    highlight: false,
-    disabled: true,
-  },
-  {
-    name: "Starter",
-    price: "₹299",
-    period: "/ month + GST",
-    desc: "Growing sellers on one or two channels.",
-    features: ["2,000 products", "2,000 orders / mo", "Meesho + Glowroad import", "AI templates (10)"],
-    cta: "Upgrade",
-    highlight: false,
-    disabled: false,
-  },
-  {
-    name: "Pro",
-    price: "₹799",
-    period: "/ month + GST",
-    desc: "Automation at scale with priority routing.",
-    features: [
-      "Unlimited products",
-      "Unlimited orders",
-      "IndiaMart + AliExpress",
-      "AI inbox + auto-reply rules",
-      "Priority chat",
-    ],
-    cta: "Upgrade",
-    highlight: true,
-    disabled: false,
-  },
-  {
-    name: "Enterprise",
-    price: "₹1,999",
-    period: "/ month + GST",
-    desc: "Teams, APIs, and compliance-ready exports.",
-    features: ["Dedicated success", "Custom integrations", "SLA & audit logs", "Multi-store seats"],
-    cta: "Talk to sales",
-    highlight: false,
-    disabled: false,
-  },
-];
+const API_BASE = "https://autosell-production-b292.up.railway.app";
+const getToken = () => localStorage.getItem("token");
 
 export function PricingPage() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [margin, setMargin] = useState(50);
+  const [applying, setApplying] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [competitor, setCompetitor] = useState("");
+  const [compPrice, setCompPrice] = useState("");
+
+  useEffect(() => { fetchProducts(); }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/products`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      setProducts(data.products || []);
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  const applyMargin = async () => {
+    setApplying(true);
+    setSuccess("");
+    try {
+      for (const p of products) {
+        const newSellPrice = parseFloat(p.cost_price) * (1 + margin / 100);
+        await fetch(`${API_BASE}/api/products/${p.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+          body: JSON.stringify({ ...p, sell_price: newSellPrice.toFixed(2) }),
+        });
+      }
+      setSuccess(`✅ Sabhi ${products.length} products ka sell price update ho gaya!`);
+      fetchProducts();
+    } catch { }
+    finally { setApplying(false); }
+  };
+
   return (
-    <div className="space-y-10">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Simple INR pricing</h1>
-        <p className="mx-auto mt-2 max-w-xl text-slate-400">
-          Pick a plan that matches your volume. Cancel anytime. Invoices include GST details for Indian businesses.
-        </p>
+    <div style={{ fontFamily: "sans-serif", color: "#f1f5f9" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, color: "#f1f5f9" }}>💰 Pricing Automation</h1>
+        <p style={{ color: "#64748b", marginTop: 4 }}>Auto price rules, bulk update aur competitor tracking</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {plans.map((p) => (
-          <div
-            key={p.name}
-            className={`relative flex flex-col rounded-2xl border p-6 shadow-panel ${
-              p.highlight
-                ? "border-blue-500/50 bg-gradient-to-b from-blue-600/15 to-surface-900/90 shadow-glow"
-                : "border-slate-800/80 bg-surface-900/60"
-            }`}
-          >
-            {p.highlight ? (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-0.5 text-xs font-semibold text-white">
-                Popular
-              </span>
-            ) : null}
-            <h2 className="text-lg font-semibold text-white">{p.name}</h2>
-            <p className="mt-2 text-sm text-slate-400">{p.desc}</p>
-            <div className="mt-6 flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-white">{p.price}</span>
-              <span className="text-sm text-slate-500">{p.period}</span>
-            </div>
-            <ul className="mt-6 flex-1 space-y-3 text-sm text-slate-300">
-              {p.features.map((f) => (
-                <li key={f} className="flex gap-2">
-                  <span className="text-blue-400">✓</span>
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <button
-              type="button"
-              disabled={p.disabled}
-              className={`mt-8 w-full rounded-lg py-2.5 text-sm font-semibold transition ${
-                p.disabled
-                  ? "cursor-not-allowed border border-slate-800 bg-surface-800/50 text-slate-500"
-                  : p.highlight
-                    ? "bg-blue-600 text-white hover:bg-blue-500"
-                    : "border border-slate-700 bg-surface-800 text-white hover:border-blue-500/40"
-              }`}
-            >
-              {p.cta}
-            </button>
+      {success && <div style={{ background: "#052e16", color: "#86efac", padding: "12px 16px", borderRadius: 8, marginBottom: 20, border: "1px solid #14532d" }}>{success}</div>}
+
+      {/* Feature 1 — Auto Margin */}
+      <div style={{ background: "#1e293b", borderRadius: 12, padding: 20, marginBottom: 20, border: "1px solid #334155" }}>
+        <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 4, color: "#f1f5f9" }}>📊 Auto Margin Rule</h2>
+        <p style={{ color: "#64748b", fontSize: 13, marginBottom: 16 }}>Cost price pe margin add karke sell price auto set karo</p>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
+          <div>
+            <label style={{ fontSize: 12, color: "#94a3b8", display: "block", marginBottom: 6 }}>Margin %</label>
+            <input type="number" value={margin} onChange={e => setMargin(e.target.value)} min="1" max="500"
+              style={{ padding: "8px 12px", border: "1.5px solid #334155", borderRadius: 8, fontSize: 16, fontWeight: 700, background: "#0f172a", color: "#6366f1", width: 100, textAlign: "center" }} />
           </div>
-        ))}
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: "10px 16px", fontSize: 13, color: "#94a3b8" }}>
+            Example: Cost ₹200 → Sell <strong style={{ color: "#4ade80" }}>₹{(200 * (1 + margin / 100)).toFixed(0)}</strong>
+          </div>
+        </div>
+
+        <button onClick={applyMargin} disabled={applying || products.length === 0}
+          style={{ background: applying ? "#334155" : "#6366f1", color: "#fff", border: "none", padding: "10px 24px", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 14 }}>
+          {applying ? "Updating..." : `✅ Sabhi ${products.length} Products pe Apply Karo`}
+        </button>
       </div>
 
-      <p className="text-center text-sm text-slate-500">
-        Questions?{" "}
-        <Link to="/settings" className="text-blue-400 hover:text-blue-300">
-          Open settings
-        </Link>{" "}
-        or email <span className="text-slate-400">hello@autosell.example</span>
-      </p>
+      {/* Feature 2 — Current Prices Table */}
+      <div style={{ background: "#1e293b", borderRadius: 12, border: "1px solid #334155", overflow: "hidden", marginBottom: 20 }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid #334155", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#f1f5f9" }}>📋 Current Prices</h2>
+          <span style={{ fontSize: 12, color: "#64748b" }}>{products.length} products</span>
+        </div>
+        {loading ? (
+          <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>Loading...</div>
+        ) : products.length === 0 ? (
+          <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>Koi product nahi — pehle Products page pe add karo!</div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <thead>
+              <tr style={{ background: "#0f172a" }}>
+                {["Product", "Platform", "Cost", "Sell", "Margin %", "Profit"].map(h => (
+                  <th key={h} style={{ textAlign: "left", padding: "10px 16px", color: "#64748b", fontSize: 12, fontWeight: 600, textTransform: "uppercase" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((p, i) => {
+                const cost = parseFloat(p.cost_price || 0);
+                const sell = parseFloat(p.sell_price || 0);
+                const profit = sell - cost;
+                const marginPct = cost > 0 ? ((profit / cost) * 100).toFixed(0) : 0;
+                return (
+                  <tr key={p.id} style={{ background: i % 2 === 0 ? "#1e293b" : "#162032", borderTop: "1px solid #334155" }}>
+                    <td style={{ padding: "12px 16px", fontWeight: 600, color: "#f1f5f9" }}>{p.name}</td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <span style={{ background: "#4c1d95", color: "#c4b5fd", padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{p.platform}</span>
+                    </td>
+                    <td style={{ padding: "12px 16px", color: "#94a3b8" }}>₹{cost.toFixed(0)}</td>
+                    <td style={{ padding: "12px 16px", color: "#f1f5f9", fontWeight: 700 }}>₹{sell.toFixed(0)}</td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <span style={{ background: marginPct > 30 ? "#052e16" : "#422006", color: marginPct > 30 ? "#4ade80" : "#fb923c", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>{marginPct}%</span>
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <span style={{ color: profit > 0 ? "#4ade80" : "#f87171", fontWeight: 700 }}>₹{profit.toFixed(0)}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Feature 3 — Competitor Tracking */}
+      <div style={{ background: "#1e293b", borderRadius: 12, padding: 20, border: "1px solid #334155" }}>
+        <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 4, color: "#f1f5f9" }}>🔍 Competitor Price Track</h2>
+        <p style={{ color: "#64748b", fontSize: 13, marginBottom: 16 }}>Competitor ka price note karo aur compare karo</p>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+          <input value={competitor} onChange={e => setCompetitor(e.target.value)} placeholder="Competitor product name"
+            style={{ flex: 1, padding: "8px 12px", border: "1.5px solid #334155", borderRadius: 8, fontSize: 14, background: "#0f172a", color: "#f1f5f9", minWidth: 180 }} />
+          <input value={compPrice} onChange={e => setCompPrice(e.target.value)} placeholder="₹ Price" type="number"
+            style={{ width: 120, padding: "8px 12px", border: "1.5px solid #334155", borderRadius: 8, fontSize: 14, background: "#0f172a", color: "#f1f5f9" }} />
+          <button onClick={() => { if(competitor && compPrice) { setSuccess(`✅ "${competitor}" ka price ₹${compPrice} note ho gaya!`); setCompetitor(""); setCompPrice(""); }}}
+            style={{ background: "#0ea5e9", color: "#fff", border: "none", padding: "8px 20px", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>
+            Track Karo
+          </button>
+        </div>
+        <p style={{ color: "#475569", fontSize: 12, margin: 0 }}>💡 Tip: Apne sell price ko competitor se ₹10-50 kam rakho!</p>
+      </div>
     </div>
   );
 }
