@@ -1,4 +1,4 @@
-import csv
+content = """import csv
 import io
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
@@ -28,3 +28,9 @@ async def import_meesho_orders(file: UploadFile = File(...)):
 @router.get("/orders")
 def get_meesho_orders():
     return {"message": "CSV import use karo", "endpoint": "/meesho/import-orders"}
+"""
+
+with open("routers/meesho.py", "w") as f:
+    f.write(content)
+
+print("meesho.py fixed!")
