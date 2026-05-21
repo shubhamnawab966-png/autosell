@@ -1,95 +1,107 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const STATUS_COLORS = {
-  Delivered: { bg: "#052e16", color: "#4ade80" },
-  Shipped: { bg: "#0c1a4e", color: "#60a5fa" },
-  Processing: { bg: "#422006", color: "#fb923c" },
-  Cancelled: { bg: "#450a0a", color: "#f87171" },
-};
+const API = "https://autosell-production-b292.up.railway.app";
 
-export function OrdersPage() {
-  const [orders] = useState([
-    { id: "AS-9281", customer: "Priya K.", channel: "Flipkart", total: "₹1,240", status: "Shipped", tracking: "BD123456789IN" },
-    { id: "AS-9280", customer: "Rahul M.", channel: "Meesho", total: "₹599", status: "Processing", tracking: "—" },
-    { id: "AS-9279", customer: "Sunita D.", channel: "Amazon", total: "₹2,100", status: "Delivered", tracking: "AZ987654321IN" },
-    { id: "AS-9278", customer: "Amit S.", channel: "Meesho", total: "₹450", status: "Cancelled", tracking: "—" },
-  ]);
-
+export default function OrdersPage() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
 
+  useEffect(() => {
+    fetch(`${API}/orders/`)
+      .then(res => res.json())
+      .then(data => { setOrders(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
   const filtered = orders.filter(o =>
-    (o.id.toLowerCase().includes(search.toLowerCase()) ||
-     o.customer.toLowerCase().includes(search.toLowerCase())) &&
-    (filterStatus === "All" || o.status === filterStatus)
+    (o.order_id?.toLowerCase().includes(search.toLowerCase()) ||
+     o.customer_name?.toLowerCase().includes(search.toLowerCase())) &&
+    (filterStatus === "All" || o.status === filterStatus.toLowerCase())
   );
 
-  const statusCounts = {
-    All: orders.length,
-    Processing: orders.filter(o => o.status === "Processing").length,
-    Shipped: orders.filter(o => o.status === "Shipped").length,
-    Delivered: orders.filter(o => o.status === "Delivered").length,
-    Cancelled: orders.filter(o => o.status === "Cancelled").length,
+  const statusColor = (status) => {
+    const map = {
+      delivered: { bg: "#052e16", color: "#4ade80" },
+      shipped: { bg: "#0c1a4e", color: "#60a5fa" },
+      pending: { bg: "#422006", color: "#fb923c" },
+      cancelled: { bg: "#450a0a", color: "#f87171" },
+    };
+    return map[status?.toLowerCase()] || { bg: "#1f2937", color: "#9ca3af" };
   };
 
   return (
-    <div style={{ fontFamily: "sans-serif", color: "#f1f5f9" }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, color: "#f1f5f9" }}>🛒 Orders</h1>
-        <p style={{ color: "#64748b", marginTop: 4 }}>Sabhi orders ka track record</p>
-      </div>
+    <div style={{ minHeight: "100vh", background: "#030712", color: "white", padding: "24px" }}>
+      <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "4px" }}>📦 Orders</h1>
+      <p style={{ color: "#6b7280", marginBottom: "24px" }}>Real-time orders database</p>
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 24 }}>
-        {Object.entries(statusCounts).map(([status, count]) => (
-          <div key={status} style={{ background: "#1e293b", borderRadius: 10, padding: "14px 16px", border: "1px solid #334155", textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: status === "All" ? "#6366f1" : (STATUS_COLORS[status]?.color || "#f1f5f9") }}>{count}</div>
-            <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{status}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "16px", marginBottom: "24px" }}>
+        {["Total", "Pending", "Shipped", "Delivered"].map(s => (
+          <div key={s} style={{ background: "#111827", borderRadius: "12px", padding: "16px" }}>
+            <p style={{ color: "#6b7280", fontSize: "12px" }}>{s}</p>
+            <p style={{ fontSize: "24px", fontWeight: "bold" }}>
+              {s === "Total" ? orders.length : orders.filter(o => o.status === s.toLowerCase()).length}
+            </p>
           </div>
         ))}
       </div>
 
-      {/* Search + Filter */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Order ID ya Customer..."
-          style={{ padding: "8px 12px", border: "1.5px solid #334155", borderRadius: 8, fontSize: 14, flex: 1, maxWidth: 300, background: "#1e293b", color: "#f1f5f9" }} />
-        {["All", "Processing", "Shipped", "Delivered", "Cancelled"].map(s => (
-          <button key={s} onClick={() => setFilterStatus(s)}
-            style={{ padding: "7px 14px", borderRadius: 20, border: filterStatus === s ? "none" : "1.5px solid #334155", background: filterStatus === s ? "#6366f1" : "#1e293b", color: filterStatus === s ? "#fff" : "#94a3b8", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
-            {s}
-          </button>
-        ))}
+      {/* Filters */}
+      <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+        <input
+          placeholder="Search orders..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, background: "#111827", border: "1px solid #374151", borderRadius: "8px", padding: "10px 16px", color: "white" }}
+        />
+        <select
+          value={filterStatus}
+          onChange={e => setFilterStatus(e.target.value)}
+          style={{ background: "#111827", border: "1px solid #374151", borderRadius: "8px", padding: "10px 16px", color: "white" }}
+        >
+          {["All", "Pending", "Shipped", "Delivered", "Cancelled"].map(s => (
+            <option key={s}>{s}</option>
+          ))}
+        </select>
       </div>
 
       {/* Table */}
-      <div style={{ background: "#1e293b", borderRadius: 12, border: "1px solid #334155", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-          <thead>
-            <tr style={{ background: "#0f172a" }}>
-              {["Order ID", "Customer", "Channel", "Total", "Status", "Tracking"].map(h => (
-                <th key={h} style={{ textAlign: "left", padding: "10px 16px", color: "#64748b", fontSize: 12, fontWeight: 600, textTransform: "uppercase", borderBottom: "1px solid #334155" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#64748b" }}>Koi order nahi mila</td></tr>
-            ) : filtered.map((o, i) => (
-              <tr key={o.id} style={{ background: i % 2 === 0 ? "#1e293b" : "#162032", borderTop: "1px solid #334155" }}>
-                <td style={{ padding: "12px 16px", fontWeight: 700, color: "#6366f1" }}>{o.id}</td>
-                <td style={{ padding: "12px 16px", color: "#f1f5f9" }}>{o.customer}</td>
-                <td style={{ padding: "12px 16px" }}>
-                  <span style={{ background: "#1d4ed8", color: "#bfdbfe", padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{o.channel}</span>
-                </td>
-                <td style={{ padding: "12px 16px", color: "#f1f5f9", fontWeight: 700 }}>{o.total}</td>
-                <td style={{ padding: "12px 16px" }}>
-                  <span style={{ background: STATUS_COLORS[o.status]?.bg || "#1e293b", color: STATUS_COLORS[o.status]?.color || "#f1f5f9", padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{o.status}</span>
-                </td>
-                <td style={{ padding: "12px 16px", color: "#64748b", fontFamily: "monospace", fontSize: 12 }}>{o.tracking}</td>
+      <div style={{ background: "#111827", borderRadius: "12px", overflow: "hidden" }}>
+        {loading ? (
+          <p style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>Loading...</p>
+        ) : filtered.length === 0 ? (
+          <p style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>
+            Koi order nahi — Meesho CSV import karo!
+          </p>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #1f2937" }}>
+                {["Order ID", "Product", "Customer", "Platform", "Price", "Status"].map(h => (
+                  <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#6b7280", fontSize: "12px" }}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((o, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid #1f2937" }}>
+                  <td style={{ padding: "12px 16px", color: "#a78bfa" }}>{o.order_id}</td>
+                  <td style={{ padding: "12px 16px" }}>{o.product_name}</td>
+                  <td style={{ padding: "12px 16px", color: "#9ca3af" }}>{o.customer_name}</td>
+                  <td style={{ padding: "12px 16px", color: "#60a5fa" }}>{o.platform}</td>
+                  <td style={{ padding: "12px 16px", color: "#4ade80" }}>₹{o.price}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <span style={{ ...statusColor(o.status), padding: "4px 10px", borderRadius: "999px", fontSize: "12px" }}>
+                      {o.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
