@@ -1,124 +1,82 @@
 import { useState } from "react";
 
-const templates = [
-  {
-    id: "ship",
-    title: "Shipping update (Hindi + English)",
-    category: "Shipping",
-    body: `नमस्ते {{name}} जी,
-आपका ऑर्डर #{{order_id}} कूरियर को सौंप दिया गया है। ट्रैकिंग: {{tracking}}
-Tracking link: {{tracking_url}}
+export default function AICustomerServicePage() {
+  const [messages, setMessages] = useState([
+    { role: "assistant", content: "Namaste! Main AutoSell ka AI assistant hoon. Meesho, Flipkart, pricing, ya orders ke baare mein kuch bhi poocho!" }
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
 
-Hi {{name}},
-Your order #{{order_id}} has been handed to the courier. Tracking: {{tracking}}`,
-  },
-  {
-    id: "cod",
-    title: "COD confirmation",
-    category: "COD",
-    body: `Hi {{name}}, this is {{store}}. Please keep ₹{{amount}} ready for COD delivery of order #{{order_id}}. Reply YES to confirm your address.`,
-  },
-  {
-    id: "delay",
-    title: "Delay apology + ETA",
-    category: "Delays",
-    body: `We're sorry — order #{{order_id}} is delayed due to high demand. New expected dispatch: {{eta}}. We appreciate your patience.`,
-  },
-  {
-    id: "return",
-    title: "Return window reminder",
-    category: "Returns",
-    body: `Your return window for #{{order_id}} closes on {{date}}. Initiate from your orders page or reply with RETURN to get steps in Hindi.`,
-  },
-];
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+    const userMsg = { role: "user", content: input };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInput("");
+    setLoading(true);
 
-export function AICustomerServicePage() {
-  const [selected, setSelected] = useState(templates[0]);
-  const [copied, setCopied] = useState(false);
-
-  const copy = async () => {
     try {
-      await navigator.clipboard.writeText(selected.body);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: "You are AutoSell AI assistant for Indian dropshippers. Help with Meesho, Flipkart, Amazon India, product pricing, order management, and dropshipping advice. Respond in Hinglish (Hindi-English mix). Be concise and practical.",
+          messages: newMessages
+        })
+      });
+      const data = await response.json();
+      const reply = data.content[0].text;
+      setMessages([...newMessages, { role: "assistant", content: reply }]);
+    } catch (err) {
+      setMessages([...newMessages, { role: "assistant", content: "Sorry, kuch error hua. Dobara try karo." }]);
     }
+    setLoading(false);
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">AI customer service</h1>
-        <p className="mt-1 text-slate-400">
-          Automated reply templates for WhatsApp, Instagram DMs, and marketplace chats
-        </p>
+    <div style={{ minHeight: "100vh", background: "#030712", color: "white", display: "flex", flexDirection: "column" }}>
+      <div style={{ padding: "20px 24px", borderBottom: "1px solid #1f2937" }}>
+        <h1 style={{ fontSize: "22px", fontWeight: "bold", margin: 0 }}>AI Support</h1>
+        <p style={{ color: "#6b7280", margin: "4px 0 0", fontSize: "13px" }}>Powered by Claude AI</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <div className="rounded-xl border border-slate-800/80 bg-surface-900/60 shadow-panel lg:col-span-2">
-          <div className="border-b border-slate-800/80 px-4 py-3 sm:px-5">
-            <h2 className="text-sm font-semibold text-white">Templates</h2>
-            <p className="text-xs text-slate-500">Tap to edit in preview</p>
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: "12px" }}>
+        {messages.map((msg, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
+            <div style={{
+              maxWidth: "75%", padding: "12px 16px", borderRadius: "16px", fontSize: "14px", lineHeight: "1.5",
+              background: msg.role === "user" ? "#7c3aed" : "#111827",
+              color: "white"
+            }}>
+              {msg.content}
+            </div>
           </div>
-          <ul className="max-h-[480px] divide-y divide-slate-800/80 overflow-y-auto">
-            {templates.map((t) => (
-              <li key={t.id}>
-                <button
-                  type="button"
-                  onClick={() => setSelected(t)}
-                  className={`flex w-full flex-col items-start gap-1 px-4 py-4 text-left transition sm:px-5 ${
-                    selected.id === t.id ? "bg-blue-600/10 ring-1 ring-inset ring-blue-500/30" : "hover:bg-surface-800/50"
-                  }`}
-                >
-                  <span className="text-xs font-medium uppercase tracking-wide text-blue-400/90">
-                    {t.category}
-                  </span>
-                  <span className="font-medium text-slate-200">{t.title}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+        ))}
+        {loading && (
+          <div style={{ display: "flex", justifyContent: "flex-start" }}>
+            <div style={{ background: "#111827", padding: "12px 16px", borderRadius: "16px", fontSize: "14px", color: "#6b7280" }}>
+              Soch raha hoon...
+            </div>
+          </div>
+        )}
+      </div>
 
-        <div className="rounded-xl border border-slate-800/80 bg-surface-900/60 shadow-panel lg:col-span-3">
-          <div className="flex flex-col gap-3 border-b border-slate-800/80 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
-            <div>
-              <h2 className="font-semibold text-white">{selected.title}</h2>
-              <p className="text-xs text-slate-500">Variables: {"{{name}}"}, {"{{order_id}}"}, etc.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={copy}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
-              >
-                {copied ? "Copied" : "Copy template"}
-              </button>
-              <button
-                type="button"
-                className="rounded-lg border border-slate-700 bg-surface-800 px-4 py-2 text-sm font-medium text-slate-200 hover:border-blue-500/40"
-              >
-                Simulate AI reply
-              </button>
-            </div>
-          </div>
-          <div className="p-4 sm:p-6">
-            <label htmlFor="template-body" className="sr-only">
-              Template body
-            </label>
-            <textarea
-              id="template-body"
-              rows={14}
-              readOnly
-              value={selected.body}
-              className="w-full resize-none rounded-lg border border-slate-800 bg-surface-950/80 p-4 font-mono text-sm leading-relaxed text-slate-300 outline-none focus:ring-2 focus:ring-blue-500/30"
-            />
-            <p className="mt-4 text-xs text-slate-500">
-              Pro plans unlock auto-translation, tone controls, and guardrails for marketplace policy compliance.
-            </p>
-          </div>
-        </div>
+      <div style={{ padding: "16px 24px", borderTop: "1px solid #1f2937", display: "flex", gap: "12px" }}>
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && sendMessage()}
+          placeholder="Kuch bhi poocho..."
+          style={{ flex: 1, background: "#111827", border: "1px solid #374151", borderRadius: "12px", padding: "12px 16px", color: "white", fontSize: "14px", outline: "none" }}
+        />
+        <button
+          onClick={sendMessage}
+          disabled={loading}
+          style={{ background: "#7c3aed", color: "white", border: "none", borderRadius: "12px", padding: "12px 20px", fontSize: "14px", fontWeight: "600", cursor: "pointer" }}>
+          Send
+        </button>
       </div>
     </div>
   );
