@@ -8,8 +8,7 @@ import { OrdersPage } from "./pages/OrdersPage.jsx";
 import { AICustomerServicePage } from "./pages/AICustomerServicePage.jsx";
 import { PricingPage } from "./pages/PricingPage.jsx";
 import { SettingsPage } from "./pages/SettingsPage.jsx";
-import { MeeshoPage } from "./pages/MeeshoPage.jsx";
-
+import MeeshoPage from "./pages/MeeshoPage.jsx";
 export default function App() {
   return (
     <BrowserRouter>
