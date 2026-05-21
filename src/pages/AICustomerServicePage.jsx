@@ -1,3 +1,4 @@
+// AutoSell AI Chat v2
 import { useState } from "react";
 
 export default function AICustomerServicePage() {
