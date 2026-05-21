@@ -4,7 +4,7 @@ import { LoginPage } from "./pages/LoginPage.jsx";
 import { SignupPage } from "./pages/SignupPage.jsx";
 import { DashboardPage } from "./pages/DashboardPage.jsx";
 import { ProductsPage } from "./pages/ProductsPage.jsx";
-import { OrdersPage } from "./pages/OrdersPage.jsx";
+import OrdersPage from "./pages/OrdersPage.jsx";
 import { AICustomerServicePage } from "./pages/AICustomerServicePage.jsx";
 import { PricingPage } from "./pages/PricingPage.jsx";
 import { SettingsPage } from "./pages/SettingsPage.jsx";
