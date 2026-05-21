@@ -1,143 +1,95 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const stores = [
-  {
-    id: "meesho",
-    name: "Meesho",
-    desc: "Supplier catalog & fulfilment sync",
-    connected: true,
-  },
-  {
-    id: "flipkart",
-    name: "Flipkart",
-    desc: "Seller API — orders & inventory",
-    connected: false,
-  },
-  {
-    id: "amazon",
-    name: "Amazon India",
-    desc: "SP-API orders & messaging hooks",
-    connected: false,
-  },
-];
+const API = "https://autosell-production-b292.up.railway.app";
 
-export function SettingsPage() {
-  const [notifyEmail, setNotifyEmail] = useState(true);
-  const [notifyWhatsApp, setNotifyWhatsApp] = useState(false);
-  const [connections, setConnections] = useState(
-    () => Object.fromEntries(stores.map((s) => [s.id, s.connected])),
-  );
+export default function SettingsPage() {
+  const [settings, setSettings] = useState({
+    store_name: "", phone: "", meesho_api_key: "", flipkart_api_key: "",
+    auto_pricing: false, notification_email: true
+  });
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const toggle = (id) => {
-    setConnections((c) => ({ ...c, [id]: !c[id] }));
+  useEffect(() => {
+    fetch(`${API}/settings/`)
+      .then(res => res.json())
+      .then(data => { setSettings(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    await fetch(`${API}/settings/`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings)
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
+  const inputStyle = {
+    width: "100%", background: "#1f2937", border: "1px solid #374151",
+    borderRadius: "8px", padding: "10px 14px", color: "white",
+    marginTop: "6px", boxSizing: "border-box", fontSize: "14px"
+  };
+
+  if (loading) return <div style={{ background: "#030712", minHeight: "100vh", color: "white", padding: "24px" }}>Loading...</div>;
+
   return (
-    <div className="mx-auto max-w-3xl space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Settings</h1>
-        <p className="mt-1 text-slate-400">Profile, alerts, and marketplace connections</p>
+    <div style={{ minHeight: "100vh", background: "#030712", color: "white", padding: "24px" }}>
+      <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "4px" }}>Settings</h1>
+      <p style={{ color: "#6b7280", marginBottom: "24px" }}>Store aur platform settings</p>
+
+      <div style={{ background: "#111827", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+        <h2 style={{ color: "#a78bfa", marginBottom: "16px" }}>Store Info</h2>
+        <div style={{ marginBottom: "12px" }}>
+          <label style={{ color: "#9ca3af", fontSize: "13px" }}>Store Name</label>
+          <input style={inputStyle} value={settings.store_name || ""}
+            onChange={e => setSettings({...settings, store_name: e.target.value})} />
+        </div>
+        <div>
+          <label style={{ color: "#9ca3af", fontSize: "13px" }}>Phone</label>
+          <input style={inputStyle} value={settings.phone || ""}
+            onChange={e => setSettings({...settings, phone: e.target.value})} />
+        </div>
       </div>
 
-      <section className="rounded-xl border border-slate-800/80 bg-surface-900/60 p-6 shadow-panel">
-        <h2 className="text-lg font-semibold text-white">Profile</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-slate-300">Store display name</label>
-            <input
-              type="text"
-              defaultValue="DesiCart"
-              className="mt-1.5 w-full rounded-lg border border-slate-700 bg-surface-800 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300">GSTIN</label>
-            <input
-              type="text"
-              placeholder="22AAAAA0000A1Z5"
-              className="mt-1.5 w-full rounded-lg border border-slate-700 bg-surface-800 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Default currency</label>
-            <select className="mt-1.5 w-full rounded-lg border border-slate-700 bg-surface-800 px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-blue-500">
-              <option>INR (₹)</option>
-            </select>
-          </div>
+      <div style={{ background: "#111827", borderRadius: "12px", padding: "20px", marginBottom: "16px" }}>
+        <h2 style={{ color: "#60a5fa", marginBottom: "16px" }}>Platform API Keys</h2>
+        <div style={{ marginBottom: "12px" }}>
+          <label style={{ color: "#9ca3af", fontSize: "13px" }}>Meesho Supplier Key</label>
+          <input type="password" style={inputStyle} value={settings.meesho_api_key || ""}
+            placeholder="Enter Meesho API key"
+            onChange={e => setSettings({...settings, meesho_api_key: e.target.value})} />
         </div>
-      </section>
-
-      <section className="rounded-xl border border-slate-800/80 bg-surface-900/60 p-6 shadow-panel">
-        <h2 className="text-lg font-semibold text-white">Notifications</h2>
-        <div className="mt-4 space-y-4">
-          <label className="flex items-center justify-between gap-4 rounded-lg border border-slate-800 bg-surface-950/50 px-4 py-3">
-            <span>
-              <span className="font-medium text-slate-200">Email digests</span>
-              <span className="mt-0.5 block text-xs text-slate-500">Daily summary of orders & margin</span>
-            </span>
-            <input
-              type="checkbox"
-              checked={notifyEmail}
-              onChange={(e) => setNotifyEmail(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-600 bg-surface-800 text-blue-600 focus:ring-blue-500/40"
-            />
-          </label>
-          <label className="flex items-center justify-between gap-4 rounded-lg border border-slate-800 bg-surface-950/50 px-4 py-3">
-            <span>
-              <span className="font-medium text-slate-200">WhatsApp alerts</span>
-              <span className="mt-0.5 block text-xs text-slate-500">Requires Business API (Pro+)</span>
-            </span>
-            <input
-              type="checkbox"
-              checked={notifyWhatsApp}
-              onChange={(e) => setNotifyWhatsApp(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-600 bg-surface-800 text-blue-600 focus:ring-blue-500/40"
-            />
-          </label>
+        <div>
+          <label style={{ color: "#9ca3af", fontSize: "13px" }}>Flipkart Seller Key</label>
+          <input type="password" style={inputStyle} value={settings.flipkart_api_key || ""}
+            placeholder="Enter Flipkart API key"
+            onChange={e => setSettings({...settings, flipkart_api_key: e.target.value})} />
         </div>
-      </section>
+      </div>
 
-      <section className="rounded-xl border border-slate-800/80 bg-surface-900/60 p-6 shadow-panel">
-        <h2 className="text-lg font-semibold text-white">Store connect</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Link official APIs where available. Credentials are encrypted at rest (demo toggles only).
-        </p>
-        <ul className="mt-6 space-y-4">
-          {stores.map((s) => (
-            <li
-              key={s.id}
-              className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-surface-950/40 p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-white">{s.name}</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      connections[s.id]
-                        ? "bg-emerald-500/15 text-emerald-400"
-                        : "bg-slate-600/40 text-slate-400"
-                    }`}
-                  >
-                    {connections[s.id] ? "Connected" : "Not connected"}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-slate-500">{s.desc}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => toggle(s.id)}
-                className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                  connections[s.id]
-                    ? "border border-slate-600 bg-transparent text-slate-300 hover:border-red-500/50 hover:text-red-300"
-                    : "bg-blue-600 text-white hover:bg-blue-500"
-                }`}
-              >
-                {connections[s.id] ? "Disconnect" : "Connect API"}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div style={{ background: "#111827", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
+        <h2 style={{ color: "#4ade80", marginBottom: "16px" }}>Preferences</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+          <span style={{ color: "#d1d5db" }}>Auto Pricing</span>
+          <input type="checkbox" checked={settings.auto_pricing || false}
+            onChange={e => setSettings({...settings, auto_pricing: e.target.checked})} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ color: "#d1d5db" }}>Email Notifications</span>
+          <input type="checkbox" checked={settings.notification_email || false}
+            onChange={e => setSettings({...settings, notification_email: e.target.checked})} />
+        </div>
+      </div>
+
+      <button onClick={handleSave}
+        style={{ width: "100%", background: saved ? "#16a34a" : "#7c3aed", color: "white",
+          padding: "14px", borderRadius: "12px", border: "none", fontSize: "16px",
+          fontWeight: "600", cursor: "pointer" }}>
+        {saved ? "Saved!" : "Save Settings"}
+      </button>
     </div>
   );
 }
