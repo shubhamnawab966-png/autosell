@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+content = """from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -66,3 +66,9 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     token = jwt.encode({"id": db_user.id, "email": db_user.email}, SECRET_KEY, algorithm="HS256")
     return {"token": token, "user": {"id": db_user.id, "name": db_user.name, "email": db_user.email}}
+"""
+
+with open("main.py", "w") as f:
+    f.write(content)
+
+print("main.py updated!")
