@@ -18,6 +18,9 @@ export function ProductsPage() {
   const [filterPlatform, setFilterPlatform] = useState("All");
   const [editId, setEditId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [cjProducts, setCjProducts] = useState([]);
+  const [cjSearch, setCjSearch] = useState("");
+  const [cjLoading, setCjLoading] = useState(false);
 
   useEffect(() => { fetchProducts(); }, []);
 
@@ -31,6 +34,19 @@ export function ProductsPage() {
       setProducts(data.products || []);
     } catch { setError("Products load nahi hue"); }
     finally { setLoading(false); }
+  };
+
+  const searchCJ = async () => {
+    setCjLoading(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:5000/api/products/search?q=${cjSearch}`);
+      const data = await res.json();
+      setCjProducts(data.products);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCjLoading(false);
+    }
   };
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -75,6 +91,33 @@ export function ProductsPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto", fontFamily: "sans-serif", background: "#0f172a", minHeight: "100vh", color: "#f1f5f9" }}>
+
+      {/* CJ Dropshipping Catalog */}
+      <div style={{padding:"20px", background:"#1e293b", borderRadius:"12px", marginBottom:"20px", border:"1px solid #334155"}}>
+        <h3 style={{color:"#818cf8", marginTop:0}}>🔍 CJ Dropshipping Catalog</h3>
+        <div style={{display:"flex", gap:"10px"}}>
+          <input
+            placeholder="Product search karo..."
+            value={cjSearch}
+            onChange={(e) => setCjSearch(e.target.value)}
+            style={{flex:1, padding:"10px", borderRadius:"8px", border:"1px solid #334155", background:"#0f172a", color:"#f1f5f9"}}
+          />
+          <button onClick={searchCJ} style={{padding:"10px 20px", background:"#6366f1", color:"white", borderRadius:"8px", border:"none", cursor:"pointer"}}>
+            {cjLoading ? "Searching..." : "Search"}
+          </button>
+        </div>
+        <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"15px", marginTop:"15px"}}>
+          {cjProducts.map((p) => (
+            <div key={p.id} style={{background:"#0f172a", borderRadius:"10px", padding:"10px", border:"1px solid #334155"}}>
+              <img src={p.image} alt={p.name} style={{width:"100%", height:"150px", objectFit:"cover", borderRadius:"8px"}}/>
+              <p style={{fontSize:"12px", marginTop:"8px", color:"#f1f5f9"}}>{p.name.slice(0,50)}...</p>
+              <p style={{color:"#4ade80", fontWeight:"bold"}}>₹{p.price_inr}</p>
+              <button style={{width:"100%", padding:"8px", background:"#6366f1", color:"white", borderRadius:"6px", border:"none", cursor:"pointer"}}>+ Import</button>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, color: "#f1f5f9" }}>📦 Products</h1>
         <button onClick={() => { setShowForm(!showForm); setForm(emptyForm); setEditId(null); }}
