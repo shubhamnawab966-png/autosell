@@ -68,3 +68,13 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     token = jwt.encode({"id": db_user.id, "email": db_user.email}, SECRET_KEY, algorithm="HS256")
     return {"token": token, "user": {"id": db_user.id, "name": db_user.name, "email": db_user.email}}
+@app.get("/test-cj-auth")
+async def test_cj_auth():
+    from cj_api import get_access_token
+    token = await get_access_token(force=True)
+    return {"token_preview": token[:10] + "..."}
+
+@app.get("/api/products/search")
+async def search_products(q: str = "trending"):
+    from cj_api import search_cj_products
+    return await search_cj_products(query=q)
