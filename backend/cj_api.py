@@ -5,8 +5,7 @@ from fastapi import HTTPException
 CJ_AUTH_URL = "https://developers.cjdropshipping.com/api2.0/v1/authentication/getAccessToken"
 CJ_PRODUCT_URL = "https://developers.cjdropshipping.com/api2.0/v1/product/list"
 
-CJ_EMAIL = "shubhamnawab966@gmail.com"
-CJ_PASSWORD = "Nawab@7361"
+CJ_API_KEY = "CJ5318179@api@046fef6227444d5cbc230ad5e0b94d73"
 
 _token_cache = {"token": None, "expires_at": 0}
 
@@ -17,7 +16,7 @@ async def get_access_token(force=False):
     async with httpx.AsyncClient(timeout=30) as client:
         res = await client.post(
             CJ_AUTH_URL,
-            json={"email": CJ_EMAIL, "password": CJ_PASSWORD},
+            json={"apiKey": CJ_API_KEY},
             headers={"Content-Type": "application/json"}
         )
     data = res.json()
