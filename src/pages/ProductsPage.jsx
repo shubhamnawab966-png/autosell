@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_BASE = "https://autosell-production-b292.up.railway.app";
+const API_BASE = "http://localhost:5000";
 const getToken = () => localStorage.getItem("token");
 const PLATFORMS = ["Meesho", "Flipkart", "Amazon", "Other"];
 const CATEGORIES = ["Fashion", "Electronics", "Home & Kitchen", "Beauty", "Sports", "Toys", "Books", "Other"];
@@ -27,23 +27,28 @@ export function ProductsPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/products`, {
+      const storeId = localStorage.getItem('storeId') || 'default-store';
+      const res = await fetch(`${API_BASE}/api/products/${storeId}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await res.json();
       setProducts(data.products || []);
-    } catch { setError("Products load nahi hue"); }
+    } catch (err) { 
+      console.error("Error fetching products:", err);
+      setError("Products load nahi hue"); 
+    }
     finally { setLoading(false); }
   };
 
   const searchCJ = async () => {
     setCjLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/products/search?q=${cjSearch}`);
+      const res = await fetch(`${API_BASE}/api/products/search?q=${cjSearch}`);
       const data = await res.json();
-      setCjProducts(data.products);
+      setCjProducts(data.products || []);
     } catch (err) {
-      console.error(err);
+      console.error("CJ Search error:", err);
+      setError("CJ search fail hua");
     } finally {
       setCjLoading(false);
     }
@@ -56,26 +61,44 @@ export function ProductsPage() {
     if (!form.name || !form.cost_price || !form.sell_price) { setError("Name, Cost aur Sell Price required!"); return; }
     setSubmitting(true);
     try {
-      const url = editId ? `${API_BASE}/api/products/${editId}` : `${API_BASE}/api/products`;
+      const storeId = localStorage.getItem('storeId') || 'default-store';
+      const url = editId ? `${API_BASE}/api/products/${editId}` : `${API_BASE}/api/products/import`;
       const res = await fetch(url, {
         method: editId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ ...form, cost_price: parseFloat(form.cost_price), sell_price: parseFloat(form.sell_price), stock: parseInt(form.stock) || 0 }),
+        body: JSON.stringify({ 
+          ...form, 
+          storeId: storeId,
+          cost_price: parseFloat(form.cost_price), 
+          sell_price: parseFloat(form.sell_price), 
+          stock: parseInt(form.stock) || 0 
+        }),
       });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Error"); }
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || d.detail || "Error"); }
       setSuccess(editId ? "Updated! ✅" : "Product add ho gaya! ✅");
       setForm(emptyForm); setShowForm(false); setEditId(null);
       fetchProducts();
-    } catch (err) { setError(err.message); }
+    } catch (err) { 
+      console.error("Submit error:", err);
+      setError(err.message); 
+    }
     finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id) => {
     setDeleteId(id);
     try {
-      await fetch(`${API_BASE}/api/products/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` } });
-      setSuccess("Deleted ✅"); fetchProducts();
-    } catch { setError("Delete error"); }
+      const res = await fetch(`${API_BASE}/api/products/${id}`, { 
+        method: "DELETE", 
+        headers: { Authorization: `Bearer ${getToken()}` } 
+      });
+      if (!res.ok) throw new Error("Delete failed");
+      setSuccess("Deleted ✅"); 
+      fetchProducts();
+    } catch (err) { 
+      console.error("Delete error:", err);
+      setError("Delete error"); 
+    }
     finally { setDeleteId(null); }
   };
 
