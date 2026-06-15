@@ -1,239 +1,129 @@
-import { useState, useEffect } from "react";
-
-const API_BASE = "http://localhost:5000";
-const getToken = () => localStorage.getItem("token");
-const PLATFORMS = ["Meesho", "Flipkart", "Amazon", "Other"];
-const CATEGORIES = ["Fashion", "Electronics", "Home & Kitchen", "Beauty", "Sports", "Toys", "Books", "Other"];
-const emptyForm = { name: "", sku: "", cost_price: "", sell_price: "", platform: "Meesho", category: "Fashion", stock: "", image_url: "", description: "" };
+import { useState } from 'react';
 
 export function ProductsPage() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(emptyForm);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [search, setSearch] = useState("");
-  const [filterPlatform, setFilterPlatform] = useState("All");
-  const [editId, setEditId] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
-  const [cjProducts, setCjProducts] = useState([]);
-  const [cjSearch, setCjSearch] = useState("");
-  const [cjLoading, setCjLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [importingProducts, setImportingProducts] = useState(new Set());
 
-  useEffect(() => { fetchProducts(); }, []);
-
-  const fetchProducts = async () => {
+  async function handleSearch() {
+    if (!searchQuery.trim()) return;
     setLoading(true);
+    setResults([]);
+    
     try {
-      const storeId = localStorage.getItem('storeId') || 'default-store';
-      const res = await fetch(`${API_BASE}/api/products/${storeId}`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
+      const response = await fetch('http://localhost:5000/api/cj/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: searchQuery })
       });
-      const data = await res.json();
-      setProducts(data.products || []);
-    } catch (err) { 
-      console.error("Error fetching products:", err);
-      setError("Products load nahi hue"); 
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        const items = Array.isArray(data.results) 
+          ? data.results 
+          : (data.results?.items || []);
+        setResults(items);
+      }
+    } catch (e) {
+      console.error('Error:', e);
     }
-    finally { setLoading(false); }
-  };
+    setLoading(false);
+  }
 
-  const searchCJ = async () => {
-    setCjLoading(true);
+  async function handleImportProduct(product) {
+    // Add to importing set
+    setImportingProducts(prev => new Set([...prev, product.pid]));
+    
     try {
-      const res = await fetch(`${API_BASE}/api/products/search?q=${cjSearch}`);
-      const data = await res.json();
-      setCjProducts(data.products || []);
-    } catch (err) {
-      console.error("CJ Search error:", err);
-      setError("CJ search fail hua");
-    } finally {
-      setCjLoading(false);
-    }
-  };
-
-  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
-
-  const handleSubmit = async () => {
-    setError(""); setSuccess("");
-    if (!form.name || !form.cost_price || !form.sell_price) { setError("Name, Cost aur Sell Price required!"); return; }
-    setSubmitting(true);
-    try {
-      const storeId = localStorage.getItem('storeId') || 'default-store';
-      const url = editId ? `${API_BASE}/api/products/${editId}` : `${API_BASE}/api/products/import`;
-      const res = await fetch(url, {
-        method: editId ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ 
-          ...form, 
-          storeId: storeId,
-          cost_price: parseFloat(form.cost_price), 
-          sell_price: parseFloat(form.sell_price), 
-          stock: parseInt(form.stock) || 0 
-        }),
+      const response = await fetch('http://localhost:5000/api/products/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: 1,
+          name: product.productName,
+          sellPrice: product.sellPrice,
+          originalPrice: product.costPrice || product.sellPrice,
+          image: product.productImage,
+          sku: product.pid,
+          description: product.productName,
+          productImage: product.productImage
+        })
       });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || d.detail || "Error"); }
-      setSuccess(editId ? "Updated! ✅" : "Product add ho gaya! ✅");
-      setForm(emptyForm); setShowForm(false); setEditId(null);
-      fetchProducts();
-    } catch (err) { 
-      console.error("Submit error:", err);
-      setError(err.message); 
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('✅ Product imported successfully!');
+      } else {
+        alert('❌ Import failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (e) {
+      alert('❌ Error: ' + e.message);
     }
-    finally { setSubmitting(false); }
-  };
-
-  const handleDelete = async (id) => {
-    setDeleteId(id);
-    try {
-      const res = await fetch(`${API_BASE}/api/products/${id}`, { 
-        method: "DELETE", 
-        headers: { Authorization: `Bearer ${getToken()}` } 
-      });
-      if (!res.ok) throw new Error("Delete failed");
-      setSuccess("Deleted ✅"); 
-      fetchProducts();
-    } catch (err) { 
-      console.error("Delete error:", err);
-      setError("Delete error"); 
-    }
-    finally { setDeleteId(null); }
-  };
-
-  const handleEdit = (p) => {
-    setForm({ name: p.name||"", sku: p.sku||"", cost_price: p.cost_price||"", sell_price: p.sell_price||"", platform: p.platform||"Meesho", category: p.category||"Fashion", stock: p.stock||"", image_url: p.image_url||"", description: p.description||"" });
-    setEditId(p.id); setShowForm(true);
-  };
-
-  const filtered = products.filter(p =>
-    (p.name?.toLowerCase().includes(search.toLowerCase()) || p.sku?.toLowerCase().includes(search.toLowerCase())) &&
-    (filterPlatform === "All" || p.platform === filterPlatform)
-  );
+    
+    // Remove from importing set
+    setImportingProducts(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(product.pid);
+      return newSet;
+    });
+  }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto", fontFamily: "sans-serif", background: "#0f172a", minHeight: "100vh", color: "#f1f5f9" }}>
-
-      {/* CJ Dropshipping Catalog */}
-      <div style={{padding:"20px", background:"#1e293b", borderRadius:"12px", marginBottom:"20px", border:"1px solid #334155"}}>
-        <h3 style={{color:"#818cf8", marginTop:0}}>🔍 CJ Dropshipping Catalog</h3>
-        <div style={{display:"flex", gap:"10px"}}>
+    <div className="p-6 bg-surface-950 min-h-screen">
+      <h1 className="text-white text-3xl font-bold mb-6">Products</h1>
+      
+      <div className="bg-surface-900 p-6 rounded-2xl mb-6">
+        <h2 className="text-white text-xl mb-4">🔍 CJ Dropshipping Catalog</h2>
+        <div className="flex gap-2 mb-4">
           <input
-            placeholder="Product search karo..."
-            value={cjSearch}
-            onChange={(e) => setCjSearch(e.target.value)}
-            style={{flex:1, padding:"10px", borderRadius:"8px", border:"1px solid #334155", background:"#0f172a", color:"#f1f5f9"}}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="Search products..."
+            className="flex-1 p-3 bg-surface-800 text-white rounded-lg"
           />
-          <button onClick={searchCJ} style={{padding:"10px 20px", background:"#6366f1", color:"white", borderRadius:"8px", border:"none", cursor:"pointer"}}>
-            {cjLoading ? "Searching..." : "Search"}
+          <button 
+            onClick={handleSearch}
+            disabled={loading}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-bold"
+          >
+            {loading ? 'Searching...' : 'Search'}
           </button>
         </div>
-        <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"15px", marginTop:"15px"}}>
-          {cjProducts.map((p) => (
-            <div key={p.id} style={{background:"#0f172a", borderRadius:"10px", padding:"10px", border:"1px solid #334155"}}>
-              <img src={p.image} alt={p.name} style={{width:"100%", height:"150px", objectFit:"cover", borderRadius:"8px"}}/>
-              <p style={{fontSize:"12px", marginTop:"8px", color:"#f1f5f9"}}>{p.name.slice(0,50)}...</p>
-              <p style={{color:"#4ade80", fontWeight:"bold"}}>₹{p.price_inr}</p>
-              <button style={{width:"100%", padding:"8px", background:"#6366f1", color:"white", borderRadius:"6px", border:"none", cursor:"pointer"}}>+ Import</button>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, color: "#f1f5f9" }}>📦 Products</h1>
-        <button onClick={() => { setShowForm(!showForm); setForm(emptyForm); setEditId(null); }}
-          style={{ background: "#6366f1", color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>
-          {showForm ? "✕ Cancel" : "+ Product Add Karo"}
-        </button>
-      </div>
-
-      {error && <div style={{ background: "#450a0a", color: "#fca5a5", padding: "10px 16px", borderRadius: 8, marginBottom: 16 }}>{error}</div>}
-      {success && <div style={{ background: "#052e16", color: "#86efac", padding: "10px 16px", borderRadius: 8, marginBottom: 16 }}>{success}</div>}
-
-      {showForm && (
-        <div style={{ background: "#1e293b", borderRadius: 12, padding: 20, marginBottom: 20, border: "1px solid #334155" }}>
-          <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 16, color: "#f1f5f9" }}>{editId ? "✏️ Edit" : "➕ Naya Product"}</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {[["name","Product Name *"],["sku","SKU"],["cost_price","Cost Price (₹) *"],["sell_price","Sell Price (₹) *"],["stock","Stock"]].map(([key, label]) => (
-              <div key={key}>
-                <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4, color: "#94a3b8" }}>{label}</label>
-                <input name={key} value={form[key]} onChange={handleChange}
-                  style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #334155", borderRadius: 8, fontSize: 14, background: "#0f172a", color: "#f1f5f9", boxSizing: "border-box" }} />
-              </div>
-            ))}
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4, color: "#94a3b8" }}>Platform</label>
-              <select name="platform" value={form.platform} onChange={handleChange}
-                style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #334155", borderRadius: 8, fontSize: 14, background: "#0f172a", color: "#f1f5f9" }}>
-                {PLATFORMS.map(p => <option key={p}>{p}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4, color: "#94a3b8" }}>Category</label>
-              <select name="category" value={form.category} onChange={handleChange}
-                style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #334155", borderRadius: 8, fontSize: 14, background: "#0f172a", color: "#f1f5f9" }}>
-                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-              </select>
+        {results.length > 0 && (
+          <div>
+            <p className="text-white mb-4">✅ Found {results.length} products</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {results.map((product) => (
+                <div key={product.pid} className="bg-surface-800 p-3 rounded-lg hover:bg-surface-700 transition">
+                  <img 
+                    src={product.productImage} 
+                    alt={product.productName} 
+                    className="w-full h-32 object-cover rounded mb-2"
+                  />
+                  <h3 className="text-white text-sm font-bold line-clamp-2">{product.productName}</h3>
+                  <p className="text-yellow-400 font-bold mt-1">₹{product.sellPrice}</p>
+                  <button 
+                    onClick={() => handleImportProduct(product)}
+                    disabled={importingProducts.has(product.pid)}
+                    className="w-full bg-green-500 hover:bg-green-600 text-white text-sm py-2 rounded mt-2 font-bold disabled:opacity-50"
+                  >
+                    {importingProducts.has(product.pid) ? '⏳ Importing...' : '📥 Import'}
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
-          <button onClick={handleSubmit} disabled={submitting}
-            style={{ marginTop: 16, background: "#6366f1", color: "#fff", border: "none", padding: "10px 24px", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>
-            {submitting ? "Saving..." : editId ? "✅ Update" : "✅ Add Karo"}
-          </button>
-        </div>
-      )}
+        )}
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Search..."
-          style={{ padding: "8px 12px", border: "1.5px solid #334155", borderRadius: 8, fontSize: 14, flex: 1, maxWidth: 300, background: "#1e293b", color: "#f1f5f9" }} />
-        {["All", ...PLATFORMS].map(p => (
-          <button key={p} onClick={() => setFilterPlatform(p)}
-            style={{ padding: "7px 14px", borderRadius: 20, border: filterPlatform === p ? "none" : "1.5px solid #334155", background: filterPlatform === p ? "#6366f1" : "#1e293b", color: filterPlatform === p ? "#fff" : "#94a3b8", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
-            {p}
-          </button>
-        ))}
+        {results.length === 0 && searchQuery && !loading && (
+          <p className="text-gray-400">No products found</p>
+        )}
       </div>
-
-      {loading ? (
-        <div style={{ textAlign: "center", padding: 60, background: "#1e293b", borderRadius: 12, color: "#64748b" }}>Loading...</div>
-      ) : filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 60, background: "#1e293b", borderRadius: 12, border: "2px dashed #334155" }}>
-          <div style={{ fontSize: 48 }}>📦</div>
-          <h3 style={{ color: "#f1f5f9" }}>Koi product nahi hai</h3>
-          <p style={{ color: "#64748b" }}>+ Product Add Karo button dabaao!</p>
-        </div>
-      ) : (
-        <div style={{ background: "#1e293b", borderRadius: 12, border: "1px solid #334155", overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-            <thead>
-              <tr style={{ background: "#0f172a" }}>
-                {["Product","SKU","Platform","Cost","Sell","Profit","Stock","Actions"].map(h =>
-                  <th key={h} style={{ textAlign: "left", padding: "10px 14px", color: "#64748b", fontSize: 12, fontWeight: 600, textTransform: "uppercase", borderBottom: "1px solid #334155" }}>{h}</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p, i) => (
-                <tr key={p.id} style={{ background: i % 2 === 0 ? "#1e293b" : "#162032", borderBottom: "1px solid #334155" }}>
-                  <td style={{ padding: "12px 14px", fontWeight: 600, color: "#f1f5f9" }}>{p.name}</td>
-                  <td style={{ padding: "12px 14px", color: "#64748b", fontFamily: "monospace", fontSize: 12 }}>{p.sku || "—"}</td>
-                  <td style={{ padding: "12px 14px" }}><span style={{ background: "#4c1d95", color: "#c4b5fd", padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{p.platform}</span></td>
-                  <td style={{ padding: "12px 14px", color: "#94a3b8" }}>₹{parseFloat(p.cost_price||0).toFixed(0)}</td>
-                  <td style={{ padding: "12px 14px", color: "#f1f5f9", fontWeight: 700 }}>₹{parseFloat(p.sell_price||0).toFixed(0)}</td>
-                  <td style={{ padding: "12px 14px" }}><span style={{ background: "#052e16", color: "#4ade80", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>₹{(parseFloat(p.sell_price||0)-parseFloat(p.cost_price||0)).toFixed(0)}</span></td>
-                  <td style={{ padding: "12px 14px", color: "#94a3b8" }}>{p.stock ?? "—"}</td>
-                  <td style={{ padding: "12px 14px" }}>
-                    <button onClick={() => handleEdit(p)} style={{ background: "#1d4ed8", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", color: "#fff", marginRight: 6 }}>✏️</button>
-                    <button onClick={() => handleDelete(p.id)} disabled={deleteId === p.id} style={{ background: "#7f1d1d", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", color: "#fff" }}>🗑️</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }

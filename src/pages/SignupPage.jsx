@@ -13,13 +13,13 @@ export function SignupPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('https://autosell-production-b292.up.railway.app/api/auth/signup', {
+      const res = await fetch('http://localhost:5000/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail);
+      if (!res.ok) throw new Error(data.error || 'Signup failed');
       localStorage.setItem('token', data.token);
       navigate('/dashboard');
     } catch (err) {
