@@ -12,8 +12,7 @@ load_dotenv()
 Base.metadata.create_all(bind=engine)
 
 app = Flask(__name__)
-# Allow both 5173 AND 5174 ports
-CORS(app, resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174"], "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
+CORS(app)
 
 # Token decorator
 def token_required(f):
@@ -31,7 +30,6 @@ def token_required(f):
             return jsonify({'message': 'Token is missing!'}), 401
         
         try:
-            # Simple token parsing - token format: token_<user_id>
             if token.startswith('token_'):
                 user_id = int(token.split('_')[1])
                 db = SessionLocal()
@@ -59,13 +57,11 @@ def signup():
         db = SessionLocal()
         data = request.json
         
-        # Check if user already exists
         existing_user = db.query(User).filter(User.email == data['email']).first()
         if existing_user:
             db.close()
             return jsonify({"success": False, "error": "Email already exists"}), 400
         
-        # Create new user
         hashed_password = generate_password_hash(data['password'])
         new_user = User(
             email=data['email'],
@@ -107,7 +103,6 @@ def cj_search():
         data = request.json
         query = data.get('query', '')
         
-        # Run async function properly
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
@@ -123,13 +118,11 @@ def cj_search():
 @app.route('/api/cj-products/search', methods=['GET'])
 @token_required
 def cj_products_search(current_user):
-    """Search CJ products with proper error handling"""
     try:
         from cj_api import search_cj_products
         
         query = request.args.get('q', '')
         
-        # Validate query
         if not query or len(query.strip()) == 0:
             return jsonify({
                 "ok": False,
@@ -140,7 +133,6 @@ def cj_products_search(current_user):
         
         print(f"Searching CJ products for: {query}")
         
-        # Run async function with error handling
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
@@ -149,7 +141,6 @@ def cj_products_search(current_user):
         finally:
             loop.close()
         
-        # Ensure results is a list
         if not isinstance(results, list):
             results = []
         
@@ -202,14 +193,11 @@ def list_products():
 @app.route('/api/products/import', methods=['POST'])
 @token_required
 def import_product(current_user):
-    """Import product from CJ to user's store"""
     try:
         db = SessionLocal()
         data = request.json
         
-        # Handle both sellPrice (from CJ API) and sell_price variants
         sell_price = data.get('sellPrice') or data.get('sell_price') or 0
-        original_price = data.get('originalPrice') or data.get('original_price') or 0
         image_url = data.get('image') or data.get('productImage') or ''
         product_name = data.get('name') or data.get('productName') or ''
         
@@ -245,7 +233,6 @@ def import_product(current_user):
 @app.route('/api/products/get', methods=['GET'])
 @token_required
 def get_products(current_user):
-    """Fetch all products for the logged-in user"""
     try:
         db = SessionLocal()
         products = db.query(Product).filter(Product.user_id == current_user.id).order_by(Product.created_at.desc()).all()
@@ -277,6 +264,29 @@ def get_products(current_user):
             'ok': False,
             'error': str(e)
         }), 500
+
+@app.route('/api/products/delete/<int:product_id>', methods=['DELETE'])
+@token_required
+def delete_product(current_user, product_id):
+    try:
+        db = SessionLocal()
+        product = db.query(Product).filter(
+            Product.id == product_id,
+            Product.user_id == current_user.id
+        ).first()
+        
+        if not product:
+            db.close()
+            return jsonify({"ok": False, "error": "Product not found"}), 404
+        
+        db.delete(product)
+        db.commit()
+        db.close()
+        return jsonify({"ok": True, "success": True}), 200
+    except Exception as e:
+        db.rollback()
+        db.close()
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 # ==================== Run ====================
 
