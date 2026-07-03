@@ -1,7 +1,7 @@
 lines = [
     'import { useState, useEffect } from "react";\n',
     '\n',
-    'const API = "https://autosell-production-b292.up.railway.app";\n',
+    'const API = "http://localhost:5000";\n',
     '\n',
     'export default function SettingsPage() {\n',
     '  const [settings, setSettings] = useState({\n',

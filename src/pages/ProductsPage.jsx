@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export function ProductsPage() {
   const [activeTab, setActiveTab] = useState("my-products");
@@ -8,8 +8,8 @@ export function ProductsPage() {
   const [loading, setLoading] = useState(false);
   const [importingProducts, setImportingProducts] = useState({});
   const [error, setError] = useState(null);
+  const debounceRef = useRef(null);
 
-  // Fetch imported products from database
   useEffect(() => {
     fetchMyProducts();
   }, []);
@@ -22,9 +22,7 @@ export function ProductsPage() {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
-
       if (!response.ok) throw new Error("Failed to fetch products");
-
       const data = await response.json();
       setMyProducts(data.products || []);
       setError(null);
@@ -36,14 +34,19 @@ export function ProductsPage() {
     }
   };
 
-  // Search CJ products
-  const handleSearchCJ = async (query) => {
+  const handleSearchCJ = (query) => {
     setSearchQuery(query);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!query.trim()) {
       setCJResults([]);
       return;
     }
+    debounceRef.current = setTimeout(() => {
+      runSearch(query);
+    }, 600);
+  };
 
+  const runSearch = async (query) => {
     try {
       setLoading(true);
       const response = await fetch(
@@ -54,9 +57,7 @@ export function ProductsPage() {
           },
         }
       );
-
       if (!response.ok) throw new Error("Search failed");
-
       const data = await response.json();
       setCJResults(data.items || []);
       setError(null);
@@ -69,11 +70,9 @@ export function ProductsPage() {
     }
   };
 
-  // Import product to database
   const handleImportProduct = async (product) => {
     const productKey = product.pid;
     setImportingProducts((prev) => ({ ...prev, [productKey]: true }));
-
     try {
       const response = await fetch("/api/products/import", {
         method: "POST",
@@ -90,19 +89,10 @@ export function ProductsPage() {
           saleStatus: product.saleStatus,
         }),
       });
-
       if (!response.ok) throw new Error("Import failed");
-
-      // Show success message
       alert("Product imported successfully!");
-
-      // Refresh my products
       await fetchMyProducts();
-
-      // Remove from CJ results
-      setCJResults((prev) =>
-        prev.filter((p) => p.pid !== product.pid)
-      );
+      setCJResults((prev) => prev.filter((p) => p.pid !== product.pid));
     } catch (err) {
       console.error("Import error:", err);
       alert("Failed to import product: " + err.message);
@@ -111,15 +101,61 @@ export function ProductsPage() {
     }
   };
 
+  const handleRemoveProduct = async (productId) => {
+    if (!window.confirm("Kya tum ye product remove karna chahte ho?")) return;
+    try {
+      const response = await fetch(`/api/products/delete/${productId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      if (!response.ok) throw new Error("Remove failed");
+      setMyProducts((prev) => prev.filter((p) => p.id !== productId));
+      alert("Product removed!");
+    } catch (err) {
+      console.error("Remove error:", err);
+      alert("Failed to remove product: " + err.message);
+    }
+  };
+
+  const handleEditProduct = async (product) => {
+    const newPrice = window.prompt(
+      "Naya sell price daalo (₹):",
+      product.sellPrice
+    );
+    if (newPrice === null) return;
+    const parsedPrice = parseFloat(newPrice);
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      alert("Sahi price daalo (number hona chahiye)");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/products/update/${product.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ sellPrice: parsedPrice }),
+      });
+      if (!response.ok) throw new Error("Update failed");
+      await fetchMyProducts();
+      alert("Price update ho gaya!");
+    } catch (err) {
+      console.error("Edit error:", err);
+      alert("Failed to update product: " + err.message);
+    }
+  };
+
   return (
     <div className="w-full h-full bg-gray-900 text-white p-6">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Products</h1>
         <p className="text-gray-400">Manage your store inventory</p>
       </div>
 
-      {/* Error Alert */}
       {error && (
         <div className="mb-6 p-4 bg-red-900/30 border border-red-700 rounded-lg flex items-center gap-3">
           <span className="text-2xl">⚠️</span>
@@ -127,7 +163,6 @@ export function ProductsPage() {
         </div>
       )}
 
-      {/* Tabs */}
       <div className="flex gap-4 mb-8 border-b border-gray-700">
         <button
           onClick={() => setActiveTab("my-products")}
@@ -151,7 +186,6 @@ export function ProductsPage() {
         </button>
       </div>
 
-      {/* My Products Tab */}
       {activeTab === "my-products" && (
         <div>
           {loading ? (
@@ -195,10 +229,16 @@ export function ProductsPage() {
                       ₹{product.sellPrice}
                     </p>
                     <div className="flex gap-2">
-                      <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-medium transition">
+                      <button
+                        onClick={() => handleEditProduct(product)}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-medium transition"
+                      >
                         ✏️ Edit
                       </button>
-                      <button className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded text-sm font-medium transition">
+                      <button
+                        onClick={() => handleRemoveProduct(product.id)}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded text-sm font-medium transition"
+                      >
                         🗑️ Remove
                       </button>
                     </div>
@@ -210,10 +250,8 @@ export function ProductsPage() {
         </div>
       )}
 
-      {/* CJ Catalog Tab */}
       {activeTab === "cj-catalog" && (
         <div>
-          {/* Search Bar */}
           <div className="mb-8">
             <div className="relative">
               <input
@@ -227,7 +265,6 @@ export function ProductsPage() {
             </div>
           </div>
 
-          {/* Results */}
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <span className="text-4xl animate-spin">⏳</span>

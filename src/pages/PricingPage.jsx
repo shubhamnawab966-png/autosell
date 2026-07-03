@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_BASE = "https://autosell-production-b292.up.railway.app";
+const API_BASE = "http://localhost:5000";
 const getToken = () => localStorage.getItem("token");
 
 export function PricingPage() {

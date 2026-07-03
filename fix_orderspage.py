@@ -1,6 +1,6 @@
 content = """import { useState, useEffect } from "react";
 
-const API = "https://autosell-production-b292.up.railway.app";
+const API = "http://localhost:5000";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);

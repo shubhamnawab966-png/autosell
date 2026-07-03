@@ -141,15 +141,14 @@ def cj_products_search(current_user):
         finally:
             loop.close()
         
-        if not isinstance(results, list):
-            results = []
+        items = results.get("items", []) if isinstance(results, dict) else []
         
-        print(f"Found {len(results)} products")
+        print(f"Found {len(items)} products")
         
         return jsonify({
             "ok": True,
-            "items": results,
-            "count": len(results)
+            "items": items,
+            "count": len(items)
         }), 200
         
     except Exception as e:
@@ -177,11 +176,11 @@ def list_products():
             "products": [
                 {
                     "id": p.id,
-                    "name": p.name,
-                    "price": p.price,
-                    "image_url": p.image_url,
+                    "name": p.productName,
+                    "price": p.sellPrice,
+                    "image_url": p.productImage,
                     "supplier": p.supplier,
-                    "status": p.status
+                    "status": p.saleStatus
                 }
                 for p in products
             ]
@@ -189,6 +188,87 @@ def list_products():
     except Exception as e:
         db.close()
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/products', methods=['GET'])
+def get_products_smart():
+    try:
+        query = request.args.get('q', '').strip()
+        
+        token = None
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            try:
+                token = auth_header.split(" ")[1]
+            except IndexError:
+                pass
+        
+        if token and token.startswith('token_'):
+            try:
+                user_id = int(token.split('_')[1])
+                db = SessionLocal()
+                
+                if query:
+                    results = []
+                else:
+                    products = db.query(Product).filter(Product.user_id == user_id).order_by(Product.created_at.desc()).limit(50).all()
+                    results = [
+                        {
+                            'id': p.id,
+                            'pid': p.pid,
+                            'name': p.productName,
+                            'productName': p.productName,
+                            'cost_price': getattr(p, 'cost_price', 0),
+                            'sell_price': float(p.sellPrice) if p.sellPrice else 0,
+                            'platform': getattr(p, 'platform', 'cj_dropshipping'),
+                            'productImage': p.productImage,
+                            'isFreeShipping': p.isFreeShipping,
+                            'saleStatus': p.saleStatus,
+                            'created_at': p.created_at.isoformat() if p.created_at else None
+                        }
+                        for p in products
+                    ]
+                
+                db.close()
+                return jsonify({
+                    'success': True,
+                    'products': results,
+                    'count': len(results)
+                }), 200
+            except Exception as e:
+                return jsonify({'success': False, 'products': [], 'error': str(e)}), 500
+        
+        db = SessionLocal()
+        products = db.query(Product).order_by(Product.created_at.desc()).limit(20).all()
+        results = [
+            {
+                'id': p.id,
+                'pid': p.pid,
+                'name': p.productName,
+                'productName': p.productName,
+                'cost_price': getattr(p, 'cost_price', 0),
+                'sell_price': float(p.sellPrice) if p.sellPrice else 0,
+                'platform': getattr(p, 'platform', 'cj_dropshipping'),
+                'productImage': p.productImage,
+                'isFreeShipping': p.isFreeShipping,
+                'saleStatus': p.saleStatus
+            }
+            for p in products
+        ]
+        db.close()
+        
+        return jsonify({
+            'success': True,
+            'products': results,
+            'count': len(results)
+        }), 200
+        
+    except Exception as e:
+        print(f"Error in /api/products: {str(e)}")
+        return jsonify({
+            'success': False,
+            'products': [],
+            'error': str(e)
+        }), 500
 
 @app.route('/api/products/import', methods=['POST'])
 @token_required
@@ -264,6 +344,36 @@ def get_products(current_user):
             'ok': False,
             'error': str(e)
         }), 500
+
+@app.route('/api/products/update/<int:product_id>', methods=['PUT'])
+@token_required
+def update_product(current_user, product_id):
+    try:
+        db = SessionLocal()
+        product = db.query(Product).filter(
+            Product.id == product_id,
+            Product.user_id == current_user.id
+        ).first()
+
+        if not product:
+            db.close()
+            return jsonify({"ok": False, "error": "Product not found"}), 404
+
+        data = request.json
+        if 'sellPrice' in data:
+            product.sellPrice = float(data['sellPrice'])
+        if 'productName' in data:
+            product.productName = data['productName']
+
+        db.commit()
+        db.refresh(product)
+        db.close()
+
+        return jsonify({"ok": True, "success": True}), 200
+    except Exception as e:
+        db.rollback()
+        db.close()
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/products/delete/<int:product_id>', methods=['DELETE'])
 @token_required

@@ -40,5 +40,22 @@ async def search_cj_products(query: str, page_num=1, page_size=20):
     print("SEARCH RESPONSE:", data)
     if data.get("result") is True:
         items = data.get("data", {}).get("list", [])
+
+        # Price fix: CJ ka raw USD price -> INR conversion + 30% markup
+        # min Rs.20 profit guarantee, nearest Rs.10 pe round
+        for item in items:
+            try:
+                usd_price = float(str(item.get("sellPrice", 0)).split("--")[0].strip())
+            except (ValueError, TypeError):
+                usd_price = 0
+
+            cost_inr = round(usd_price * 80)
+            sell_inr = round((cost_inr * 1.30) / 10) * 10
+            if sell_inr - cost_inr < 20:
+                sell_inr = cost_inr + 20
+
+            item["cost_price"] = cost_inr
+            item["sellPrice"] = sell_inr
+
         return {"ok": True, "count": len(items), "items": items}
     raise HTTPException(status_code=502, detail=f"CJ Search failed: {data}")

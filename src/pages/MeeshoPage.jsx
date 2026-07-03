@@ -16,7 +16,7 @@ export default function MeeshoPage() {
 
     try {
       const res = await fetch(
-        "https://autosell-production-b292.up.railway.app/meesho/import-orders",
+        "http://localhost:5000/meesho/import-orders",
         { method: "POST", body: formData }
       );
       const data = await res.json();
